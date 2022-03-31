@@ -42,7 +42,8 @@ def imReadAndConvert(filename: str, representation: int) -> np.ndarray:
         img_temp = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
         img_final = cv2.cvtColor(img_temp, cv2.COLOR_BGR2RGB)
         #return image array normalized
-    return img_final.divide(other = 255)
+        img_final_return = (img_final - img_color.min()) / (img_final.mac() - img_color.min())
+    return img_final_return
 
         
 
@@ -71,7 +72,7 @@ def transformRGB2YIQ(imgRGB: np.ndarray) -> np.ndarray:
             q.append(0.48*(temp_r-temp_y) + 0.41*(temp_b-temp_y))
             #combines y, i and q lists to image
     yiq_img = np.dstack((y,i,q))  
-    return yiq_img
+    return np.dot(yiq_img)
 
 
 
@@ -92,7 +93,7 @@ def transformYIQ2RGB(imgYIQ: np.ndarray) -> np.ndarray:
             b.append(temp_y - 1.1085450346420322*temp_i + 1.7090069284064666*temp_q)
             #combines r, g and b lists to image
     rgb_img = np.dstack((r,g,b))  
-    return rgb_img
+    return np.dot(rgb_img)
 
 
 def hsitogramEqualize(imgOrig: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarray):
@@ -123,12 +124,41 @@ def hsitogramEqualize(imgOrig: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarra
 
 def quantizeImage(imOrig: np.ndarray, nQuant: int, nIter: int) -> (List[np.ndarray], List[float]):
     
-    # not done
-    """
-        Quantized an image in to **nQuant** colors
-        :param imOrig: The original image (RGB or Gray scale)
-        :param nQuant: Number of colors to quantize the image to
-        :param nIter: Number of optimization loops
-        :return: (List[qImage_i],List[error_i])
-    """
-    pass
+    if len(imOrig.shape) == 3: #if rgb
+        img_toyiq = transformRGB2YIQ(imOrig)
+        #keep only y channel like told 
+        img_y_channel = img_toyiq[:, :, 0].copy()
+        #save to working image
+        workingimg = img_y_channel
+    else:
+        #img is already grayscale save and carry on
+        working_img = imOrig
+        
+    histOrig = np.histogram(working_img.flatten(), bins=256)[0]
+
+    Z = []
+    Q = []
+    # head start, all the intervals are in the same length
+    z = np.arange(0, 256, round(256 / nQuant))
+    z = np.append(z, [255])
+    Z.append(z.copy())
+    q = fix_q(z, histOrig)
+    Q.append(q.copy())
+    for n in range(nIter):
+        z = fix_z(q)
+        if (Z[-1] == z).all():  # break if nothing changed
+            break
+        Z.append(z.copy())
+        q = fix_q(z, histOrig)
+        Q.append(q.copy())
+        
+    image_history = [imOrig.copy()]
+    E = []
+    for i in range(len(Z)):
+        arrayQuantize = np.array([Q[i][k] for k in range(len(Q[i])) for x in range(Z[i][k], Z[i][k + 1])])
+        q_img, e = convertToImg(imY, histOrig, imYIQ if len(imOrig.shape) == 3 else [], arrayQuantize)
+        image_history.append(q_img)
+        E.append(e)
+
+    return image_history, E
+        
