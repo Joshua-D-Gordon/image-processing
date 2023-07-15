@@ -61,7 +61,3 @@ warpImage(src_img, dst_img)
 ```
 
 Feel free to explore the toolbox and modify the functions to suit your specific needs.
-
-## License
-
-This toolbox is licensed under the [MIT License](LICENSE).
