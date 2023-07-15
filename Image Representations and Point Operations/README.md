@@ -72,7 +72,3 @@ gamma_corrected_image = gammaCorrection(image, gamma=2.2)
 ```
 
 Feel free to explore the toolbox and modify the functions to suit your specific needs.
-
-## License
-
-This toolbox is licensed under the [MIT License](LICENSE).
